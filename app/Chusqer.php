@@ -42,6 +42,7 @@ class Chusqer extends Model
         return  Storage::disk('public')->url($image);
     }
 
+
     public function toSearchableArray()
     {
         $this->load('user');
@@ -49,4 +50,8 @@ class Chusqer extends Model
         return $this->toArray();
     }
 
+
+    public function likes(){
+        return $this->hasMany(Like::class, 'chusqer_like')->latest();
+    }
 }

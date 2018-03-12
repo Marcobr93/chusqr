@@ -43,7 +43,7 @@ class User extends Authenticatable
      */
     public function follows()
     {
-       return $this->belongsToMany(User::class, 'followers', 'user_id', 'followed_id');
+        return $this->belongsToMany(User::class, 'followers', 'user_id', 'followed_id');
     }
 
     /**
@@ -79,6 +79,14 @@ class User extends Authenticatable
     public function amI()
     {
         return Auth::user()->id == $this->id;
+    }
+
+    /** Un usuario puede hacer muchos likes
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function likes()
+    {
+        return $this->hasMany(Like::class, 'user_like');
     }
 
 }

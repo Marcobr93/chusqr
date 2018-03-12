@@ -43,7 +43,12 @@ Route::group(['middleware' => 'auth'], function(){
     Route::get('/profile/avatar', 'UsersController@edit')->name('profile.avatar');
     Route::get('/profile/delete', 'UsersController@edit')->name('profile.delete');
     Route::delete('/profile/delete', 'UsersController@destroy');
+
+    Route::post('/{chusqr}/like', 'ChusqersController@createOrDelete')->name('like.create');
+
 });
+
+Route::get('/{chusqer}/likes', 'ChusqersController@mostrarListaLikes');
 
 Route::get('/chusqers', 'ChusqersController@search');
 Route::get('/chusqers/{chusqer}', 'ChusqersController@show')->name('chusqers.show');

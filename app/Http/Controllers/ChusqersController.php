@@ -5,12 +5,26 @@ namespace App\Http\Controllers;
 use App\Chusqer;
 use App\Hashtag;
 use App\Http\Requests\CreateChusqerRequest;
+use App\Like;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
 class ChusqersController extends Controller
 {
+    private $user;
+
+    public function __construct()
+    {
+        $this->middleware(function ($request, $next) {
+            $this->user = auth()->user();
+
+            return $next($request);
+        });
+
+        $this->user = auth()->user();
+    }
+
     /**
      * Método que muestra la información de un mensaje. Utiliza Route Binding
      * para coneguir el Chusqer facilitado por el parámetro.
@@ -42,26 +56,27 @@ class ChusqersController extends Controller
      * @param CreateChusqerRequest $request
      * @return mixed
      */
-    public function store(CreateChusqerRequest $request){
+    public function store(CreateChusqerRequest $request)
+    {
 
         $user = $request->user();
 
         $hashtags = $this->extractHashtags($request->input('content'));
 
 
-        if( $image = $request->file('image') ){
-            $url = $image->store('image','public');
-        }else{
+        if ($image = $request->file('image')) {
+            $url = $image->store('image', 'public');
+        } else {
             $url = "https://picsum.photos/150/150/?random";
         }
 
         $chusqer = Chusqer::create([
-            'user_id'   => $user->id,
-            'content'   => $request->input('content'),
-            'image'     => $url,
+            'user_id' => $user->id,
+            'content' => $request->input('content'),
+            'image' => $url,
         ]);
 
-        foreach ($hashtags as $singleHashtag){
+        foreach ($hashtags as $singleHashtag) {
             $hashtag = Hashtag::firstOrCreate(['slug' => $singleHashtag]);
             $chusqer->hashtags()->attach($hashtag);
         }
@@ -77,7 +92,7 @@ class ChusqersController extends Controller
      */
     public function edit(Chusqer $chusqer)
     {
-        if( ! Auth::user()->can('delete', $chusqer) ){
+        if (!Auth::user()->can('delete', $chusqer)) {
             return redirect()->route('home');
         }
 
@@ -88,26 +103,25 @@ class ChusqersController extends Controller
 
     public function patch(CreateChusqerRequest $request, Chusqer $chusqer)
     {
-        if( ! Auth::user()->can('delete', $chusqer) ){
+        if (!Auth::user()->can('delete', $chusqer)) {
             return redirect()->route('home');
         }
 
-        if( $image = $request->file('image') ){
-            if( !strpos($chusqer->image, "http") ) {
+        if ($image = $request->file('image')) {
+            if (!strpos($chusqer->image, "http")) {
                 $routeParts = explode('/', $chusqer->image);
-                Storage::disk('public')->delete('chusqers/'.end($routeParts));
+                Storage::disk('public')->delete('chusqers/' . end($routeParts));
             }
 
-            $url = $image->store('chusqers','public');
-        }else{
+            $url = $image->store('chusqers', 'public');
+        } else {
             $url = $chusqer->image;
         }
 
 
-
         $chusqer->fill([
             'content' => $request->input('content'),
-            'image'     => $url,
+            'image' => $url,
         ]);
 
         $chusqer->update();
@@ -122,7 +136,7 @@ class ChusqersController extends Controller
      */
     public function destroy(Chusqer $chusqer)
     {
-        if( ! Auth::user()->can('delete', $chusqer) ){
+        if (!Auth::user()->can('delete', $chusqer)) {
             return redirect()->route('home');
         }
 
@@ -135,12 +149,12 @@ class ChusqersController extends Controller
     {
         preg_match_all("/(#\w+)/u", $content, $matches);
 
-        if( $matches ){
+        if ($matches) {
             $hashtagsValues = array_count_values($matches[0]);
             $hashtags = array_keys($hashtagsValues);
         }
 
-        array_walk($hashtags, function(&$value){
+        array_walk($hashtags, function (&$value) {
             $value = str_replace("#", "", $value);
         });
 
@@ -168,5 +182,39 @@ class ChusqersController extends Controller
     }
 
 
+    /** Función que crea o borra un like dependiendo si existe o no en la base de datos.
+     * @param $chusqer
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function createOrDelete($chusqer)
+    {
+        $user_like = $this->user->id;
 
+        $chusqr_like = $chusqer;
+
+        $like = Like::with('user')->where('user_like', $user_like)
+            ->where('chusqer_like', $chusqr_like)->first();
+
+        if ($like == null) {
+            Like::create([
+                'user_like' => $user_like,
+                'chusqer_like' => $chusqr_like,
+            ]);
+            return redirect()->back()->with('exito', 'Has dado LIKE al Chusqer');
+
+        } else {
+            $like->delete();
+            return redirect()->back()->with('error', 'Has quitado el LIKE al Chusqer');
+        }
+    }
+
+
+    public function mostrarListaLikes($chusqer)
+    {
+        $chusqer = Chusqer::find($chusqer);
+
+        return view('likes.likes', [
+            'chusqer' => $chusqer,
+        ]);
+    }
 }
